@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .carousel-wrapper {
+  position: relative;
+  overflow: hidden;
+  width: 600px;
+  padding: 0 5%;
+  margin: 0 auto;
+}
+
+.carousel-wrapper * {
+  box-sizing: border-box;
+}
+
+.carousel {
+  display: flex;
+  width: 100%;
+  aspect-ratio: 1/1;
+  transform-style: preserve-3d;
+  transition: transform;
+  margin: auto;
+  border: 1px solid black;
+  background-color: aliceblue;
+}
+
+.carousel__photo {
+  opacity: 0;
+  position: absolute;
+  margin: auto;
+  z-index: 100;
+  transition: transform .5s, opacity .5s, z-index .5s;
+}
+
+.carousel__photo.initial,
+.carousel__photo.active {
+  opacity: 1;
+  position: relative;
+  z-index: 900;
+}
+
+.carousel__photo.prev,
+.carousel__photo.next {
+  z-index: 800;
+}
+
+.carousel__photo.prev {
+  transform: translateX(-100%);
+}
+
+.carousel__photo.next {
+  transform: translateX(100%);
+}
+
+.carousel__button--prev,
+.carousel__button--next {
+  position: absolute;
+  top: 50%;
+  width: 3rem;
+  height: 3rem;
+  background-color: #fff;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1001;
+  border: 1px solid black;
+}
+
+.carousel__button--prev {
+  left: -0.01rem;
+}
+
+.carousel__button--next {
+  right: -0.01rem;
+}
+
+.carousel__button--prev::after,
+.carousel__button--next::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: 50%;
+  left: 54%;
+  border-right: 2px solid black;
+  border-bottom: 2px solid black;
+  transform: translate(-50%, -50%) rotate(135deg);
+}
+
+.carousel__button--next::after {
+  left: 47%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.dNone {
+  display: none;
+}
+  </style>
+</head>
+<body>
+  <input type="file" name="" id="" multiple accept="image/*">
+  <p class="length"></p>
+  <div class="carousel-wrapper dNone">
+    <div class="carousel__button--next"></div>
+    <div class="carousel__button--prev"></div>
+    <div class="carousel">
+    </div>
+</body>
+<script>
+const carousel = document.querySelector('.carousel');
+const fileInput = document.querySelector('input');
+const lengthP = document.querySelector('.length');
+const uploadFiles = [];
+fileInput.addEventListener('change', (e) => {
+  const fileArray = new Promise((resolve, reject) => {
+    Array.from(e.target.files).forEach(async (file, i) => {
+      console.log('index', i);
+      const imgToResize = new Image();
+      // URL.createObjectURL(file);
+      imgToResize.onload = async () => {
+        await imageLoaded(imgToResize, file);
+        if (uploadFiles.length === e.target.files.length) {
+          console.log(e.target.files.length, i, 'it\' equal!');
+          resolve();
+        };
+      }
+      imgToResize.src = await fileToDataUri(file);
+    });
+  });
+
+  fileArray.then(() => {
+    document.querySelector('.carousel-wrapper').classList.remove('dNone');
+    imgBtnSetting(carousel);
+    console.log('uploadFiles', uploadFiles);
+  });
+
+  // Array.from(e.target.files).forEach(async (file, i) => {
+  //   const imgToResize = new Image();
+  //   // URL.createObjectURL(file);
+  //   imgToResize.addEventListener('load', async () => {
+  //     await imageLoaded(imgToResize, file).then(res=> {
+  //       console.log(res);
+  //       if (i === e.target.files.length - 1) {
+  //       document.querySelector('.carousel-wrapper').classList.remove('dNone');
+  //       imgBtnSetting(carousel);
+  //       console.log('uploadFiles', uploadFiles);
+  //     }
+  //     })
+  //   })
+  //   imgToResize.src = await fileToDataUri(file);
+  // })
+})
+async function imageLoaded(imgToResize, file) {
+    const resizedImg = await imgOnLoad(imgToResize, file);
+    carousel.appendChild(resizedImg);
+    resizedImg.src = resizeImage(imgToResize);
+    // const newFile = new File([resizedImg.src], 'newImage');
+    // const fileURL = URL.createObjectURL(newFile);
+    // const a = document.createElement('a');
+    // a.download = newFile.name;
+    // a.href = resizedImg.src;
+    // console.log(fileURL);
+    // console.log('imgsrc', resizedImg.src);
+    // a.click();
+    // URL.revokeObjectURL(newFile);
+    let newFile;
+    await base64toFile(resizedImg.src, file.name).then(async (res) => {
+      newFile = res;
+      uploadFiles.push(newFile);
+      lengthP.textContent = uploadFiles.length;
+      console.log('here', uploadFiles);
+      return new Promise((resolve) => resolve(newFile))
+    })
+    // const newFile = await base64toFile(resizedImg.src, file.name);
+    // uploadFiles.push(newFile);
+    // lengthP.textContent = uploadFiles.length;
+    // console.log('here', resizedImg);
+    // if (i === e.target.files.length - 1) {
+    //   document.querySelector('.carousel-wrapper').classList.remove('dNone');
+    //   imgBtnSetting(carousel);
+    //   console.log('uploadFiles', uploadFiles);
+    // }
+  }
+async function base64toFile(base_data, filename) {
+
+var arr = base_data.split(','),
+    mime = arr[0].match(/:(.*?);/)[1],
+    bstr = atob(arr[1]),
+    n = bstr.length,
+    u8arr = new Uint8Array(n);
+
+while(n--){
+    u8arr[n] = bstr.charCodeAt(n);
+    if (n == 1) console.log('n is empty now');
+}
+
+return new File([u8arr], filename, {type:mime});
+}
+function imgOnLoad(imgToResize, file) {
+    return new Promise((resolve) => {
+      const resizedImg = document.createElement('img');
+      resizedImg.src = this.resizeImage(imgToResize);
+      resizedImg.setAttribute('data-file', file.name);
+      resizedImg.classList.add('carousel__photo');
+      resolve(resizedImg);
+    })
+  }
+function fileToDataUri(field) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', (e) => {
+      resolve(reader.result);
+    });
+    reader.readAsDataURL(field);
+  })
+}
+function resizeImage(imgToResize) {
+  const resizingFactor = 500;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const originalWidth = imgToResize.width;
+  const originalHeight = imgToResize.height;
+  let canvasWidth = originalWidth;
+  let canvasHeight = originalHeight;
+  if (originalWidth > resizingFactor || originalHeight > resizingFactor) {
+    if (originalHeight >= originalWidth) {
+      canvasHeight = 500;
+      canvasWidth = originalWidth * (resizingFactor / originalHeight);
+    } else {
+      canvasHeight = originalHeight * (resizingFactor / originalWidth);
+      canvasWidth = 500;
+    }
+  }
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  ctx.drawImage(imgToResize, 0, 0, canvasWidth, canvasHeight);
+  return canvas.toDataURL('image/png', 1);
+}
+function imgBtnSetting(container) {
+    const prev = document.querySelector('.carousel__button--prev');
+    const next = document.querySelector('.carousel__button--next');
+    const imgs = container.children;
+    console.log(imgs, imgs.length);
+    if (imgs.length > 1) {
+      console.log('imgs');
+      imgs[0].classList.add('active');
+      imgs[imgs.length - 1].classList.add('prev');
+      imgs[1].classList.add('next');
+      prev.addEventListener('click', (e) => carouselBtnClicked(container, 'prev', imgs.length > 2 ? 3 : 2));
+      next.addEventListener('click', (e) => carouselBtnClicked(container, 'next', imgs.length > 2 ? 3 : 2));
+      [prev, next].forEach(x => x.classList.remove('dNone'));
+    } else {
+      console.log(imgs);
+      imgs[0].classList.add('active');
+      [prev, next].forEach(x => x.classList.add('dNone'));
+    }
+  }
+  function carouselBtnClicked(container, clickedBtn, length) {
+    // clickedBtn === 'prev' ?
+    //   container.style.transform = 'translateX(-200px)' :
+    //   container.style.transform = 'translateX(200px)'
+    // container.ontransitionend = () => {
+    //   console.log('end');
+    //   if (clickedBtn === 'prev') {
+    //     container.insertBefore(container.lastElementChild, container.firstElementChild);
+    //     container.style.transform = 'translateX(200px)';
+    //   } else {
+    //     container.appendChild(container.firstElementChild);
+    //     container.style.transform = 'translateX(-200px)';
+    //   }
+    // }
+    let activePic = document.querySelector('.active');
+    let prevPic = document.querySelector('.prev');
+    let nextPic = document.querySelector('.next');
+    if (clickedBtn === 'prev') {
+      // container.style.transform = 'translateX(-90%)'
+      activePic.classList.remove('active');
+      prevPic.classList.remove('prev');
+      nextPic.classList.remove('next');
+      activePic.classList.add('next');
+      prevPic.classList.add('active');
+      length === 3 ? prevPic.previousElementSibling.classList.add('prev') : activePic.classList.add('prev');
+      container.insertBefore(container.lastElementChild, container.firstElementChild);
+    } else {
+      // container.style.transform = 'translateX(90%)'
+      activePic.classList.remove('active');
+      prevPic.classList.remove('prev');
+      nextPic.classList.remove('next');
+      activePic.classList.add('prev');
+      nextPic.classList.add('active');
+      length === 3 ? nextPic.nextElementSibling.classList.add('next') : activePic.classList.add('next');
+      container.appendChild(container.firstElementChild);
+    }
+
+  }
+</script>
+</html>
